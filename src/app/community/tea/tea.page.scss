@@ -20,27 +20,35 @@ ion-content.tea {
   box-shadow: 0 8px 24px rgba(0,0,0,.04);
 }
 
-.row {
+.composer-row {
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
 
-.me {
+.me-icon {
   font-size: 34px;
-  opacity: .75;
+  opacity: .7;
   margin-top: 2px;
+  flex: 0 0 auto;
 }
 
 .composer-input {
-  width: 100%;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
-  --padding-start: 10px;
-  --padding-end: 10px;
+  flex: 1 1 auto;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  --padding-start: 12px;
+  --padding-end: 12px;
   border-radius: 14px;
   background: rgba(0,0,0,.03);
   font-size: 14px;
+}
+
+.post-btn {
+  height: 34px;
+  margin-top: 2px;
+  text-transform: none;
+  font-weight: 800;
 }
 
 .composer-actions {
@@ -48,6 +56,7 @@ ion-content.tea {
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
+  gap: 10px;
 }
 
 .attach {
@@ -55,13 +64,12 @@ ion-content.tea {
   --padding-end: 8px;
   height: 34px;
   text-transform: none;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-.post-btn {
-  height: 34px;
-  text-transform: none;
-  font-weight: 800;
+.hint {
+  font-size: 12px;
+  opacity: .7;
 }
 
 .error {
@@ -70,8 +78,7 @@ ion-content.tea {
   font-size: 13px;
 }
 
-/* Attachments preview */
-
+/* Attachment preview */
 .attachments {
   display: flex;
   gap: 10px;
@@ -90,11 +97,12 @@ ion-content.tea {
   border: 1px solid rgba(0,0,0,.08);
 }
 
-.thumb img,
-.thumb video {
+.chip img,
+.chip video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #c4076c;
 }
 
 .remove {
@@ -116,29 +124,27 @@ ion-content.tea {
   opacity: .85;
 }
 
-/* ===== Feed Cards ===== */
+/* ===== Feed ===== */
 
 .feed {
-  padding: 0;
-  margin: 0;
+  padding: 0 12px 18px;
 }
 
 .card {
-  margin: 12px 12px 0;
-  border-radius: 16px;
+  background: #fff;
   border: 1px solid rgba(0,0,0,.06);
-  --background: #fff;
-  --padding-start: 12px;
-  --inner-padding-end: 12px;
+  border-radius: 16px;
+  padding: 12px;
+  margin-top: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.04);
 }
 
+/* Header */
 .head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
 }
 
 .left {
@@ -181,93 +187,120 @@ ion-content.tea {
 }
 
 /* Body */
-
 .body {
+  margin-top: 10px;
   font-size: 14px;
   line-height: 1.45;
-  margin-bottom: 10px;
 }
 
-/* BuddyBoss content margins */
+/* BuddyBoss content cleanups */
 .body :global(p) { margin: 6px 0; }
 .body :global(ul) { margin: 6px 0 6px 18px; }
 .body :global(a) { text-decoration: underline; }
 
-/* Media */
+/* ===== IG-style Media ===== */
 
-/* Media area */
 .media {
   margin-top: 10px;
-  display: grid;
+}
+
+.media-track {
+  display: flex;
   gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
 }
 
-/* Images */
-.media-img {
-  width: 100%;
-  max-height: 420px;      /* ✅ stops huge images */
-  object-fit: cover;      /* IG style */
-  border-radius: 14px;
-  background: #000;
-  border: 1px solid rgba(0,0,0,.06);
+.media-track.single {
+  overflow-x: hidden; /* 1 item doesn’t need scroll */
 }
 
-/* Videos */
+.media-track::-webkit-scrollbar { height: 6px; }
+.media-track::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,.12);
+  border-radius: 999px;
+}
+
+.media-frame {
+  flex: 0 0 72%;
+  scroll-snap-align: start;
+
+  border-radius: 16px;
+  overflow: hidden;
+  background: #9e6b98;
+  border: 1px solid rgba(0,0,0,.08);
+
+  aspect-ratio: 4 / 5;
+  max-height: 420px; /* ✅ reduces “super big” */
+  position: relative;
+}
+
+.media-track.single .media-frame {
+  flex: 1 1 auto;
+  max-height: 360px;
+}
+
+.media-img,
 .media-video {
   width: 100%;
-  max-height: 520px;
-  object-fit: cover;
-  border-radius: 14px;
-  background: #000;
-  border: 1px solid rgba(0,0,0,.06);
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 
-/* Actions */
+/* Video badge */
+.media-frame.is-video::after {
+  content: "▶";
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: rgba(0,0,0,.45);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+/* ===== Actions ===== */
 
 .actions {
   display: flex;
-  gap: 6px;
+  gap: 10px;
   border-top: 1px solid rgba(0,0,0,.06);
-  padding-top: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
 }
 
-.action {
-  --padding-start: 6px;
-  --padding-end: 6px;
-  height: 34px;
-  text-transform: none;
+.a-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
   font-weight: 800;
+  font-size: 13px;
+  color: inherit;
+  opacity: .92;
 }
 
-.action ion-icon {
-  margin-right: 6px;
+.a-btn:active {
+  background: rgba(0,0,0,.05);
+}
+
+.a-btn ion-icon {
   font-size: 18px;
 }
 
+/* Empty */
 .empty {
   opacity: .7;
   text-align: center;
-  margin: 16px 0 30px;
-}
-
-/* ===== Recipient Picker Modal ===== */
-
-.picker-modal::part(content) {
-  border-radius: 18px 18px 0 0;
-}
-
-.picker-search {
-  padding: 0 10px 10px;
-}
-
-.picker-state {
-  display: grid;
-  place-items: center;
-  gap: 10px;
-  padding: 20px;
-  opacity: .85;
-}
-
-.r-name {
-  font-weight: 800;
+  margin: 18px 0 30px;
 }

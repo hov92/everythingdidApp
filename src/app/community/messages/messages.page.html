@@ -1,0 +1,64 @@
+ <ion-header>
+  <ion-toolbar>
+    <ion-title>Messages</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="newMessage()">
+        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <div class="search-wrap">
+    <ion-searchbar
+      [(ngModel)]="q"
+      placeholder="Search messages"
+      debounce="250"
+    ></ion-searchbar>
+  </div>
+</ion-header>
+
+<ion-content>
+
+  <!-- Pending “sent from Tea” (outbox) -->
+  <div class="section" *ngIf="outbox.length">
+    <div class="section-title">Pending sends</div>
+
+    <ion-list class="list">
+      <ion-item button detail="true" *ngFor="let x of outbox" (click)="acceptOutbox(x)">
+        <ion-icon slot="start" name="paper-plane-outline"></ion-icon>
+        <ion-label>
+          <div class="row">
+            <div class="name">{{ x.to?.name || 'User' }}</div>
+            <div class="time">{{ x.sentAt | date:'short' }}</div>
+          </div>
+          <div class="sub">Tap to add to thread</div>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </div>
+
+  <!-- Inbox -->
+  <div class="section">
+    <div class="section-title">Inbox</div>
+
+    <div class="empty" *ngIf="!filteredThreads.length && !outbox.length">
+      <ion-icon name="chatbubbles-outline"></ion-icon>
+      <div class="empty-title">No messages yet</div>
+      <div class="empty-sub">When you “Send” a post from Tea, it’ll show up here.</div>
+    </div>
+
+    <ion-list class="list" *ngIf="filteredThreads.length">
+      <ion-item button detail="true" *ngFor="let t of filteredThreads" (click)="openThread(t)">
+        <img class="avatar" slot="start" [src]="t.peer?.avatar || 'https://www.gravatar.com/avatar/?d=mp&s=96'" alt="" />
+        <ion-label>
+          <div class="row">
+            <div class="name">{{ t.peer?.name || 'User' }}</div>
+            <div class="time">{{ t.lastAt | date:'short' }}</div>
+          </div>
+          <div class="preview">{{ t.lastText }}</div>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </div>
+
+</ion-content>

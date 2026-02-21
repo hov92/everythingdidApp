@@ -1,5 +1,6 @@
 <ion-content class="tea">
 
+  <!-- Pull to refresh -->
   <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
     <ion-refresher-content pullingText="Pull to refresh"></ion-refresher-content>
   </ion-refresher>
@@ -7,8 +8,9 @@
   <!-- Composer -->
   <div class="composer">
     <div class="composer-card">
-      <div class="row">
-        <ion-icon class="me" name="person-circle-outline"></ion-icon>
+
+      <div class="composer-row">
+        <ion-icon class="me-icon" name="person-circle-outline"></ion-icon>
 
         <ion-textarea
           class="composer-input"
@@ -16,15 +18,22 @@
           autoGrow="true"
           placeholder="What’s the tea?"
         ></ion-textarea>
+
+        <ion-button
+          class="post-btn"
+          size="small"
+          (click)="post()"
+          [disabled]="loading || (!text.trim() && !attachments.length)"
+        >
+          Post
+        </ion-button>
       </div>
 
-      <!-- attachments preview -->
+      <!-- Attachment previews (local only) -->
       <div class="attachments" *ngIf="attachments.length">
         <div class="chip" *ngFor="let a of attachments; let i = index">
-          <div class="thumb">
-            <img *ngIf="a.kind === 'image'" [src]="a.url" alt="" />
-            <video *ngIf="a.kind === 'video'" [src]="a.url" muted playsinline></video>
-          </div>
+          <img *ngIf="a.kind === 'image'" [src]="a.url" alt="" />
+          <video *ngIf="a.kind === 'video'" [src]="a.url" muted playsinline></video>
 
           <ion-button fill="clear" class="remove" (click)="removeAttachment(i)">
             <ion-icon name="close-circle"></ion-icon>
@@ -47,50 +56,49 @@
           Media
         </ion-button>
 
-        <ion-button
-          class="post-btn"
-          size="small"
-          (click)="post()"
-          [disabled]="loading || (!text.trim() && !attachments.length)"
-        >
-          Post
-        </ion-button>
+        <div class="hint" *ngIf="!attachments.length && !text.trim()">Be kind. Keep it real.</div>
       </div>
 
       <div class="error" *ngIf="error">{{ error }}</div>
     </div>
   </div>
 
-  <!-- Loading -->
+  <!-- Loading state -->
   <div class="busy" *ngIf="loading && !feed.length">
     <ion-spinner></ion-spinner>
     <div>Loading…</div>
   </div>
 
   <!-- Feed -->
-  <ion-list class="feed">
-    <ion-item *ngFor="let item of feed" lines="none" class="card">
-      <ion-label class="ion-text-wrap">
+  <div class="feed">
+    <div class="card" *ngFor="let item of feed">
 
-        <div class="head">
-          <div class="left">
-            <img class="avatar" [src]="avatarOf(item)" alt="" />
-            <div class="meta">
-              <div class="author">{{ authorOf(item) }}</div>
-              <div class="time" *ngIf="dateOf(item)">{{ dateOf(item) | date:'short' }}</div>
-            </div>
+      <!-- Header -->
+      <div class="head">
+        <div class="left">
+          <img class="avatar" [src]="avatarOf(item)" alt="" />
+          <div class="meta">
+            <div class="author">{{ authorOf(item) }}</div>
+            <div class="time" *ngIf="dateOf(item)">{{ dateOf(item) | date:'short' }}</div>
           </div>
-
-          <ion-button fill="clear" size="small" class="icon-btn">
-            <ion-icon name="ellipsis-horizontal"></ion-icon>
-          </ion-button>
         </div>
 
-        <div class="body" [innerHTML]="contentHtmlOf(item)"></div>
+        <ion-button fill="clear" size="small" class="icon-btn" (click)="openShare(item)">
+          <ion-icon name="ellipsis-horizontal"></ion-icon>
+        </ion-button>
+      </div>
 
-        <!-- Media -->
-        <div class="media" *ngIf="mediaOf(item).length">
-          <ng-container *ngFor="let m of mediaOf(item)">
+      <!-- Text/HTML content -->
+      <div class="body" [innerHTML]="contentHtmlOf(item)"></div>
+
+      <!-- Media (IG carousel frame) -->
+      <div class="media" *ngIf="mediaOf(item).length">
+        <div class="media-track" [class.single]="mediaOf(item).length === 1">
+          <div
+            class="media-frame"
+            *ngFor="let m of mediaOf(item)"
+            [class.is-video]="m.kind === 'video'"
+          >
             <img
               *ngIf="m.kind === 'image'"
               class="media-img"
@@ -103,85 +111,39 @@
               *ngIf="m.kind === 'video'"
               class="media-video"
               [src]="mediaSrc(m.url)"
-              muted
               autoplay
+              muted
               loop
               playsinline
-              controls
               preload="metadata"
             ></video>
-          </ng-container>
+          </div>
         </div>
+      </div>
 
-        <!-- Actions -->
-        <div class="actions">
-          <ion-button fill="clear" class="action" (click)="toggleLike(item)">
-            <ion-icon [name]="isLiked(item) ? 'heart' : 'heart-outline'"></ion-icon>
-            <span>Like</span>
-          </ion-button>
+      <!-- Actions -->
+      <div class="actions">
+        <button class="a-btn" type="button" (click)="toggleLike(item)">
+          <ion-icon [name]="isLiked(item) ? 'heart' : 'heart-outline'"></ion-icon>
+          <span>Like</span>
+        </button>
 
-          <ion-button fill="clear" class="action" (click)="openThread(item)">
-            <ion-icon name="chatbubble-outline"></ion-icon>
-            <span>Comment</span>
-          </ion-button>
+        <button class="a-btn" type="button" (click)="openThread(item)">
+          <ion-icon name="chatbubble-outline"></ion-icon>
+          <span>Comment</span>
+        </button>
 
-          <ion-button fill="clear" class="action" (click)="openShare(item)">
-            <ion-icon name="share-outline"></ion-icon>
-            <span>Share</span>
-          </ion-button>
-        </div>
+        <button class="a-btn" type="button" (click)="openShare(item)">
+          <ion-icon name="share-outline"></ion-icon>
+          <span>Share</span>
+        </button>
+      </div>
 
-      </ion-label>
-    </ion-item>
+    </div>
 
     <div class="empty" *ngIf="!loading && !feed.length && !error">
       No posts yet.
     </div>
-  </ion-list>
-
-  <!-- Recipient Picker Modal -->
-  <ion-modal [isOpen]="pickerOpen" (didDismiss)="closePicker()" class="picker-modal">
-    <ng-template>
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>Send to…</ion-title>
-          <ion-buttons slot="end">
-            <ion-button fill="clear" (click)="closePicker()">
-              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-
-        <div class="picker-search">
-          <ion-searchbar
-            placeholder="Search people"
-            (ionInput)="onPickerSearch($event)"
-          ></ion-searchbar>
-        </div>
-      </ion-header>
-
-      <ion-content>
-        <div class="picker-state" *ngIf="pickerLoading">
-          <ion-spinner></ion-spinner>
-          <div>Loading…</div>
-        </div>
-
-        <div class="picker-state error" *ngIf="pickerError">{{ pickerError }}</div>
-
-        <ion-list *ngIf="!pickerLoading && recipients.length">
-          <ion-item button *ngFor="let r of recipients" (click)="pickRecipient(r)">
-            <ion-icon slot="start" name="person-circle-outline"></ion-icon>
-            <ion-label>
-              <div class="r-name">{{ r.name }}</div>
-            </ion-label>
-          </ion-item>
-        </ion-list>
-
-        <div class="picker-state" *ngIf="!pickerLoading && !recipients.length && !pickerError">
-          No results
-        </div>
-      </ion-content>
-    </ng-template>
-  </ion-modal>
+  </div>
 
 </ion-content>
