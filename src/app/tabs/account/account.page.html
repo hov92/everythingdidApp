@@ -1,0 +1,112 @@
+<ion-content class="ion-padding">
+
+  <!-- Header -->
+  <div class="head">
+    <h2 class="title">Account</h2>
+    <p class="sub" *ngIf="!me">Login to post, shop, and book.</p>
+    <p class="sub" *ngIf="me">You’re signed in.</p>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">
+    <ion-spinner name="crescent"></ion-spinner>
+    <div class="loading-text">Working...</div>
+  </div>
+
+  <!-- Error -->
+  <ion-text color="danger" *ngIf="error">
+    <p class="error">{{ error }}</p>
+  </ion-text>
+
+  <!-- Logged in -->
+  <div class="card" *ngIf="me">
+    <div class="row">
+      <div class="avatar">
+        <img
+          [src]="me?.avatar_urls?.['96'] || me?.avatar_urls?.['48'] || 'https://www.gravatar.com/avatar/?d=mp&s=96'"
+          alt=""
+        />
+      </div>
+
+      <div class="meta">
+        <div class="name">{{ me?.name || me?.username || 'User' }}</div>
+        <div class="email">{{ me?.email || '' }}</div>
+        <div class="id">User ID: {{ me?.id }}</div>
+      </div>
+    </div>
+
+    <ion-button expand="block" color="medium" (click)="logout()" [disabled]="loading">
+      Log out
+    </ion-button>
+  </div>
+
+  <!-- Logged out -->
+  <div class="card" *ngIf="!me">
+
+    <!-- Google -->
+    <ion-button
+      expand="block"
+      class="google-btn"
+      (click)="loginWithGoogle()"
+      [disabled]="loading"
+    >
+      <ion-icon slot="start" name="logo-google"></ion-icon>
+      Continue with Google
+    </ion-button>
+
+    <!-- Facebook -->
+    <ion-button
+      expand="block"
+      class="facebook-btn"
+      (click)="loginWithFacebook()"
+      [disabled]="loading"
+    >
+      <ion-icon slot="start" name="logo-facebook"></ion-icon>
+      Continue with Facebook
+    </ion-button>
+
+    <div class="divider">
+      <span>or</span>
+    </div>
+
+    <!-- Username/password -->
+    <ion-list lines="none" class="form">
+      <ion-item>
+        <ion-label position="stacked">Username or Email</ion-label>
+        <ion-input
+          [(ngModel)]="username"
+          autocomplete="username"
+          inputmode="email"
+          placeholder="rey or you@email.com"
+          [disabled]="loading"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Password</ion-label>
+        <ion-input
+          [(ngModel)]="password"
+          type="password"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          [disabled]="loading"
+        ></ion-input>
+      </ion-item>
+    </ion-list>
+
+    <ion-button
+      expand="block"
+      (click)="login()"
+      [disabled]="loading || !username || !password"
+    >
+      <ion-icon slot="start" name="log-in-outline"></ion-icon>
+      Log in
+    </ion-button>
+
+    <ion-button fill="clear" size="small" (click)="loadMe()" [disabled]="loading">
+      Refresh session
+    </ion-button>
+
+  </div>
+
+</ion-content>

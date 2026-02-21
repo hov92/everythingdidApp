@@ -1,0 +1,111 @@
+<ion-content class="page">
+
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content pullingIcon="refresh-outline"></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="title-wrap">
+      <h1 class="title">Community</h1>
+      <div class="subtitle">Threads • updates • vibes</div>
+    </div>
+
+    <ion-button fill="clear" class="mini" (click)="refresh()">
+      <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <!-- Composer -->
+  <div class="composer">
+    <div class="composer-row">
+      <div class="me-avatar"></div>
+
+      <ion-textarea
+        class="composer-input"
+        [(ngModel)]="text"
+        autoGrow="true"
+        placeholder="Start a thread..."
+      ></ion-textarea>
+
+      <ion-button class="post-btn" (click)="post()" [disabled]="loading || !text?.trim()">
+        <ion-spinner *ngIf="loading" name="dots"></ion-spinner>
+        <span *ngIf="!loading">Post</span>
+      </ion-button>
+    </div>
+
+    <div class="helper">Be kind. Keep it real.</div>
+
+    <div class="error" *ngIf="error">{{ error }}</div>
+  </div>
+
+  <!-- Feed -->
+  <div class="feed">
+
+    <div class="empty" *ngIf="!loading && !error && !feed?.length">
+      No threads yet.
+    </div>
+
+    <ion-item
+      *ngFor="let item of feed; trackBy: trackById"
+      lines="none"
+      class="card"
+      (click)="openThread(item)"
+      button="true"
+      detail="false"
+    >
+      <ion-label class="ion-text-wrap">
+
+        <!-- Header -->
+        <div class="card-head">
+          <div class="head-left">
+            <div class="avatar">
+              <img [src]="avatarOf(item)" alt="" />
+            </div>
+
+            <div class="meta">
+              <div class="name">{{ authorOf(item) }}</div>
+              <div class="time" *ngIf="dateOf(item)">{{ dateOf(item) | date:'short' }}</div>
+            </div>
+          </div>
+
+          <div class="head-actions">
+            <ion-button fill="clear" class="icon-btn" (click)="openInWeb(item, $event)">
+              <ion-icon slot="icon-only" name="open-outline"></ion-icon>
+            </ion-button>
+
+            <ion-button fill="clear" class="icon-btn" (click)="openMenu(item, $event)">
+              <ion-icon slot="icon-only" name="ellipsis-horizontal"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="body" [innerHTML]="safeBody(item)"></div>
+
+        <!-- Media -->
+        <div class="media" *ngIf="mediaOf(item).length">
+          <div class="media-grid" [class.one]="mediaOf(item).length === 1">
+            <img *ngFor="let src of mediaOf(item)" [src]="src" alt="" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+          <button class="action" (click)="toggleLike(item, $event)">
+            <ion-icon [name]="isLiked(item) ? 'heart' : 'heart-outline'"></ion-icon>
+            <span>Like</span>
+          </button>
+
+          <button class="action" (click)="comment(item, $event)">
+            <ion-icon name="chatbubble-outline"></ion-icon>
+            <span>Comment</span>
+          </button>
+        </div>
+
+      </ion-label>
+    </ion-item>
+
+  </div>
+
+</ion-content>

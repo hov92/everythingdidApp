@@ -1,0 +1,8 @@
+{
+  "/wp-json": {
+    "target": "https://everythingdid.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

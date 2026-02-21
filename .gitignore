@@ -1,0 +1,43 @@
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# ---- Node / Angular build artifacts ----
+node_modules/
+dist/
+www/
+.tmp/
+.cache/
+.angular/
+coverage/
+*.log
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+
+# If you keep WP/Firebase values in Angular env files, ignore them
+src/environments/environment*.ts
+!src/environments/environment.example.ts
+
+# ---- Capacitor config (ONLY ignore if you store secrets inside it) ----
+# If your capacitor.config.ts contains NO secrets, you can REMOVE these two lines and commit it.
+capacitor.config.ts
+capacitor.config.json
+
+# ---- Firebase native files (not needed yet) ----
+google-services.json
+GoogleService-Info.plist
+
+# ---- Keys ----
+*.pem
+*.p12
+*.keystore

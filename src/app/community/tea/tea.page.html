@@ -1,0 +1,179 @@
+<ion-content class="tea">
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content pullingText="Pull to refresh"></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Composer -->
+  <div class="composer">
+    <div class="composer-card">
+      <div class="composer-row">
+        <div class="me-avatar">
+          <ion-icon name="person-circle-outline"></ion-icon>
+        </div>
+
+        <ion-textarea
+          class="composer-input"
+          [(ngModel)]="text"
+          autoGrow="true"
+          placeholder="What’s the tea?"
+        ></ion-textarea>
+      </div>
+
+      <!-- attachments preview -->
+      <div class="attachments" *ngIf="attachments.length">
+        <div class="chip" *ngFor="let a of attachments; let i = index">
+          <div class="thumb">
+            <img *ngIf="a.kind === 'image'" [src]="a.url" alt="" />
+            <video *ngIf="a.kind === 'video'" [src]="a.url" muted playsinline></video>
+          </div>
+
+          <ion-button fill="clear" class="remove" (click)="removeAttachment(i)">
+            <ion-icon name="close-circle"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+
+      <div class="composer-actions">
+        <input
+          #fileInput
+          type="file"
+          accept="image/*,video/*"
+          multiple
+          hidden
+          (change)="onFilesSelected($event)"
+        />
+
+        <ion-button fill="clear" class="attach" (click)="onPickMediaClick(fileInput)">
+          <ion-icon slot="start" name="image-outline"></ion-icon>
+          Media
+        </ion-button>
+
+        <ion-button
+          class="post-btn"
+          size="small"
+          (click)="post()"
+          [disabled]="loading || (!text.trim() && !attachments.length)"
+        >
+          Post
+        </ion-button>
+      </div>
+
+      <div class="error" *ngIf="error">{{ error }}</div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="busy" *ngIf="loading && !feed.length">
+    <ion-spinner></ion-spinner>
+    <div>Loading…</div>
+  </div>
+
+  <!-- Feed -->
+  <ion-list class="feed">
+    <ion-item *ngFor="let item of feed" lines="none" class="card">
+      <ion-label class="ion-text-wrap">
+        <div class="head">
+          <div class="left">
+            <img class="avatar" [src]="avatarOf(item)" alt="" />
+            <div class="meta">
+              <div class="author">{{ authorOf(item) }}</div>
+              <div class="time" *ngIf="dateOf(item)">{{ dateOf(item) | date:'short' }}</div>
+            </div>
+          </div>
+
+          <ion-button fill="clear" size="small" class="icon-btn" (click)="openMenu(item)">
+            <ion-icon name="ellipsis-horizontal"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="body" [innerHTML]="contentHtmlOf(item)"></div>
+
+        <!-- Media -->
+        <div class="media" *ngIf="mediaOf(item).length">
+          <ng-container *ngFor="let m of mediaOf(item)">
+            <img *ngIf="m.kind === 'image'" class="media-img" [src]="m.url" alt="" />
+            <video
+              *ngIf="m.kind === 'video'"
+              class="media-video"
+              [src]="m.url"
+              autoplay
+              muted
+              loop
+              playsinline
+              controls
+              preload="metadata"
+            ></video>
+          </ng-container>
+        </div>
+
+        <div class="actions">
+          <ion-button fill="clear" class="action" (click)="toggleLike(item)">
+            <ion-icon [name]="isLiked(item) ? 'heart' : 'heart-outline'"></ion-icon>
+            <span>Like</span>
+          </ion-button>
+
+          <ion-button fill="clear" class="action" (click)="openThread(item)">
+            <ion-icon name="chatbubble-outline"></ion-icon>
+            <span>Comment</span>
+          </ion-button>
+
+          <ion-button fill="clear" class="action" (click)="reshare(item)">
+            <ion-icon name="repeat-outline"></ion-icon>
+            <span>Reshare</span>
+          </ion-button>
+
+          <!-- ✅ SINGLE Share button (Share + Send are inside the sheet) -->
+          <ion-button fill="clear" class="action" (click)="openShare(item)">
+            <ion-icon name="share-outline"></ion-icon>
+            <span>Share</span>
+          </ion-button>
+        </div>
+      </ion-label>
+    </ion-item>
+
+    <div class="empty" *ngIf="!loading && !feed.length && !error">No posts yet.</div>
+  </ion-list>
+
+  <!-- Recipient Picker Modal -->
+  <ion-modal [isOpen]="pickerOpen" (didDismiss)="closePicker()" class="picker-modal">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Send to…</ion-title>
+          <ion-buttons slot="end">
+            <ion-button fill="clear" (click)="closePicker()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+
+        <div class="picker-search">
+          <ion-searchbar
+            placeholder="Search people"
+            (ionInput)="onPickerSearch($event)"
+          ></ion-searchbar>
+        </div>
+      </ion-header>
+
+      <ion-content>
+        <div class="picker-state" *ngIf="pickerLoading">
+          <ion-spinner></ion-spinner>
+          <div>Searching…</div>
+        </div>
+
+        <div class="picker-error" *ngIf="pickerError">{{ pickerError }}</div>
+
+        <ion-list class="picker-list">
+          <ion-item button *ngFor="let r of recipients" (click)="pickRecipient(r)">
+            <img class="picker-avatar" [src]="r.avatar || 'https://www.gravatar.com/avatar/?d=mp&s=96'" alt="" />
+            <ion-label>{{ r.name }}</ion-label>
+          </ion-item>
+        </ion-list>
+
+        <div class="picker-empty" *ngIf="!pickerLoading && !pickerError && !recipients.length">
+          No results.
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

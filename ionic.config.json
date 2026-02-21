@@ -1,0 +1,7 @@
+{
+  "name": "everythingdid",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
