@@ -1,8 +1,8 @@
 import { CommonModule, DatePipe } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 
 import {
   IonButton,
@@ -88,7 +88,7 @@ export class TeaPage {
   loading = false;
   error = '';
 
-  // Local UI-only likes
+  // UI-only likes
   private likedIds = new Set<string>();
 
   // Share / Send
@@ -101,12 +101,15 @@ export class TeaPage {
   pickerError = '';
   recipients: Recipient[] = [];
 
+  // Protected media cache: originalUrl -> blobUrl
+  private mediaCache = new Map<string, string>();
+
   constructor(
     private bb: BuddyBossService,
     private http: HttpClient,
     private router: Router,
     private actionSheet: ActionSheetController,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
   ) {
     addIcons({
       heartOutline,
@@ -137,6 +140,9 @@ export class TeaPage {
         this.feed = Array.isArray(rows) ? rows : [];
         this.loading = false;
         ev?.target?.complete?.();
+
+        // Warm first items’ media so images show even if protected
+        this.feed.slice(0, 8).forEach((it) => this.warmMedia(it));
       },
       error: (e) => {
         this.feed = [];
@@ -147,7 +153,7 @@ export class TeaPage {
     });
   }
 
-  // ===== Composer =====
+  // ===== Composer (attachments preview only; upload wiring later) =====
 
   post() {
     const content = (this.text || '').trim();
@@ -156,7 +162,6 @@ export class TeaPage {
     this.error = '';
     this.loading = true;
 
-    // NOTE: attachments are preview-only for now; server upload wiring comes next.
     this.bb.postUpdate(content || ' ').subscribe({
       next: () => {
         this.text = '';
@@ -181,7 +186,9 @@ export class TeaPage {
 
     for (const f of files) {
       const url = URL.createObjectURL(f);
-      const kind: MediaItem['kind'] = f.type.startsWith('video') ? 'video' : 'image';
+      const kind: MediaItem['kind'] = f.type.startsWith('video')
+        ? 'video'
+        : 'image';
       this.attachments.push({ url, kind });
     }
   }
@@ -202,30 +209,38 @@ export class TeaPage {
   // ===== Feed helpers =====
 
   idOf(item: AnyObj): string {
-    const id = item?.['id'] ?? item?.['activity_id'] ?? item?.['ID'] ?? `${this.authorOf(item)}-${this.dateOf(item)}`;
+    const id =
+      item?.['id'] ??
+      item?.['activity_id'] ??
+      item?.['ID'] ??
+      `${this.authorOf(item)}-${this.dateOf(item)}`;
     return String(id);
   }
 
   authorOf(item: AnyObj): string {
     return (
+      item?.['name'] ??
       item?.['user_name'] ??
       item?.['display_name'] ??
-      item?.['name'] ??
       item?.['user']?.['name'] ??
       item?.['user']?.['display_name'] ??
-      item?.['user']?.['user_display_name'] ??
       'User'
     );
   }
 
   avatarOf(item: AnyObj): string {
+    const ua = item?.['user_avatar'];
+    if (ua && typeof ua === 'object') {
+      return (
+        ua?.['thumb'] ||
+        ua?.['full'] ||
+        'https://www.gravatar.com/avatar/?d=mp&s=96'
+      );
+    }
     return (
-      item?.['user_avatar'] ??
-      item?.['user']?.['avatar_urls']?.['96'] ??
-      item?.['user']?.['avatar_urls']?.['48'] ??
-      item?.['avatar_urls']?.['96'] ??
-      item?.['avatar_urls']?.['48'] ??
-      item?.['avatar'] ??
+      ua ||
+      item?.['user']?.['avatar_urls']?.['96'] ||
+      item?.['avatar_urls']?.['96'] ||
       'https://www.gravatar.com/avatar/?d=mp&s=96'
     );
   }
@@ -236,7 +251,6 @@ export class TeaPage {
       item?.['date_gmt'] ??
       item?.['created_at'] ??
       item?.['created'] ??
-      item?.['time'] ??
       ''
     );
   }
@@ -252,103 +266,113 @@ export class TeaPage {
     return typeof c === 'string' ? c : '';
   }
 
-  // “Correct media parsing”: tries common API shapes FIRST, then HTML extraction as fallback.
+  // ✅ Uses your real API shape: bp_media_ids[].attachment_data.*
   mediaOf(item: AnyObj): MediaItem[] {
     const out: MediaItem[] = [];
 
-    // 1) Common BuddyBoss/BuddyPress shapes (arrays of objects)
-    const candidates =
-      item?.['media'] ??
-      item?.['media_items'] ??
-      item?.['attachments'] ??
-      item?.['bp_media'] ??
-      item?.['bb_media'] ??
-      item?.['media_list'] ??
-      null;
+    const bp = item?.['bp_media_ids'];
+    if (Array.isArray(bp)) {
+      for (const m of bp) {
+        const data = m?.['attachment_data'] || {};
 
-    if (Array.isArray(candidates)) {
-      for (const m of candidates) {
         const url =
-          m?.url ??
-          m?.src ??
-          m?.source_url ??
-          m?.['source_url'] ??
-          m?.['full'] ??
-          m?.['full_url'] ??
-          m?.['media_url'] ??
-          m?.['guid']?.['rendered'] ??
-          '';
+          data?.['media_theatre_popup'] ||   // ✅ best quality for feed (ex: 720x900)
+  data?.['full'] ||                  // ✅ biggest
+  data?.['activity_thumb'] ||        // small
+  data?.['thumb'] ||                 // small
+  m?.['url'] ||
+  m?.['download_url'] ||
+  '';
+
         if (!url) continue;
 
         const kind: MediaItem['kind'] =
-          (m?.type && String(m.type).includes('video')) || this.isVideoUrl(url) ? 'video' : 'image';
+          (m?.['type'] && String(m['type']).includes('video')) ||
+          this.isVideoUrl(url)
+            ? 'video'
+            : 'image';
 
-        out.push({ url, kind });
+        out.push({ url: this.cleanUrl(url), kind });
       }
     }
 
-    // 2) Sometimes media is a single object
-    const single =
-      item?.['media_item'] ??
-      item?.['attachment'] ??
-      item?.['featured_media'] ??
-      null;
+    // Fallback: parse <img>/<video>/<source> from HTML if present
+    if (!out.length) {
+      const html = this.contentHtmlOf(item);
+      if (html) {
+        const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
+        let mm: RegExpExecArray | null;
+        while ((mm = imgRe.exec(html)))
+          out.push({ url: this.cleanUrl(mm[1]), kind: 'image' });
 
-    if (single && typeof single === 'object') {
-      const url =
-        single?.url ??
-        single?.src ??
-        single?.source_url ??
-        single?.['source_url'] ??
-        single?.['guid']?.['rendered'] ??
-        '';
-      if (url) out.push({ url, kind: this.isVideoUrl(url) ? 'video' : 'image' });
-    }
-
-    // 3) HTML parsing fallback
-    const html = this.contentHtmlOf(item);
-    if (html) {
-      // <img src="">
-      const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
-      let m: RegExpExecArray | null;
-      while ((m = imgRe.exec(html))) out.push({ url: m[1], kind: 'image' });
-
-      // <video src="">
-      const videoRe = /<video[^>]+src=["']([^"']+)["']/gi;
-      while ((m = videoRe.exec(html))) out.push({ url: m[1], kind: 'video' });
-
-      // <source src="">
-      const sourceRe = /<source[^>]+src=["']([^"']+)["']/gi;
-      while ((m = sourceRe.exec(html))) {
-        const url = m[1];
-        out.push({ url, kind: this.isVideoUrl(url) ? 'video' : 'image' });
-      }
-
-      // links to direct media (common when content is just an <a>)
-      const hrefRe = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
-      while ((m = hrefRe.exec(html))) {
-        const url = m[1];
-        if (this.isMediaUrl(url)) out.push({ url, kind: this.isVideoUrl(url) ? 'video' : 'image' });
+        const sourceRe = /<source[^>]+src=["']([^"']+)["']/gi;
+        while ((mm = sourceRe.exec(html))) {
+          const u = this.cleanUrl(mm[1]);
+          out.push({ url: u, kind: this.isVideoUrl(u) ? 'video' : 'image' });
+        }
       }
     }
 
-    // Unique + clean
+    // Unique
     const seen = new Set<string>();
-    return out
-      .map((x) => ({ url: this.cleanUrl(x.url), kind: x.kind }))
-      .filter((x) => x.url && !seen.has(x.url) && (seen.add(x.url), true));
+    return out.filter(
+      (x) => x.url && !seen.has(x.url) && (seen.add(x.url), true),
+    );
   }
 
-  private cleanUrl(url: string) {
-    return String(url || '').replace(/&amp;/g, '&').trim();
+  // ✅ If media is protected, <img> won’t send JWT header.
+  // We fetch it via HttpClient (interceptor applies) as a Blob and render blob URL.
+  mediaSrc(url: string): string {
+    return this.mediaCache.get(url) || url;
+  }
+
+  private async warmMedia(item: AnyObj) {
+    const media = this.mediaOf(item);
+    for (const m of media) {
+      if (!m?.url) continue;
+      if (this.mediaCache.has(m.url)) continue;
+
+      try {
+        const blob = await this.http
+          .get(this.asProxyPath(m.url), { responseType: 'blob' as const })
+          .toPromise();
+
+        if (!blob) continue;
+        const blobUrl = URL.createObjectURL(blob);
+        this.mediaCache.set(m.url, blobUrl);
+      } catch {
+        // leave it; could be public or blocked; no crash
+      }
+    }
+  }
+
+  // If you have proxy rules for /bb-media-preview, convert absolute EverythingDid URL to local path.
+  // This makes it same-origin and avoids CORS issues in dev.
+  private asProxyPath(url: string): string {
+    const u = String(url || '').trim();
+    const base = 'https://everythingdid.com';
+    return u.startsWith(base + '/bb-media-preview/')
+      ? u.replace(base, '')
+      : u.startsWith(base + '/wp-content/')
+        ? u.replace(base, '')
+        : u;
+  }
+
+  private cleanUrl(url: string, base?: string) {
+    const u = String(url || '')
+      .replace(/&amp;/g, '&')
+      .trim();
+    // If it's already a full URL, keep it
+    if (/^https?:\/\//i.test(u)) return u;
+
+    // If we got just a filename from meta.sizes, rebuild from the base path
+    // base will be something like: https://everythingdid.com/bb-media-preview/.../bb-media-activity-image
+    // We can't safely rebuild bb-media-preview URLs from filenames, so fallback to base if no absolute URL.
+    return base ? base : u;
   }
 
   private isVideoUrl(url: string) {
     return /\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i.test(url);
-  }
-
-  private isMediaUrl(url: string) {
-    return /\.(png|jpe?g|gif|webp|mp4|webm|mov|m4v|ogg)(\?.*)?$/i.test(url);
   }
 
   snippetOf(item: AnyObj): string {
@@ -373,19 +397,21 @@ export class TeaPage {
     this.likedIds.has(id) ? this.likedIds.delete(id) : this.likedIds.add(id);
   }
 
-  openMenu(item: AnyObj) {
-    console.log('menu:', this.idOf(item), item);
-  }
-
   openThread(item: AnyObj) {
-    this.router.navigateByUrl(`/community/thread/${encodeURIComponent(this.idOf(item))}`);
+    this.router.navigateByUrl(
+      `/community/thread/${encodeURIComponent(this.idOf(item))}`,
+    );
   }
 
   shareUrlOf(item: AnyObj): string {
-    const id = this.idOf(item);
-    return `https://everythingdid.com/?activity=${encodeURIComponent(id)}`;
+    // Best deep link placeholder for now (you can change later to /news-feed/p/{id}/ etc.)
+    return (
+      item?.['link'] ||
+      `https://everythingdid.com/?activity=${encodeURIComponent(this.idOf(item))}`
+    );
   }
 
+  // ✅ Single “Share” button flow
   async openShare(item: AnyObj) {
     this.shareItem = item;
 
@@ -421,7 +447,7 @@ export class TeaPage {
     await sheet.present();
   }
 
-  // ✅ Instant repost
+  // ✅ Instant repost (text-based)
   reshare(item: AnyObj) {
     const author = this.authorOf(item);
     const snippet = this.snippetOf(item);
@@ -444,7 +470,7 @@ export class TeaPage {
     });
   }
 
-  // ===== Recipient picker modal (no Messages page needed yet) =====
+  // ===== Recipient picker modal (placeholder “DM send” until Messages page exists) =====
 
   openRecipientPicker(item: AnyObj) {
     this.shareItem = item;
@@ -452,7 +478,7 @@ export class TeaPage {
     this.pickerQuery = '';
     this.recipients = [];
     this.pickerError = '';
-    this.loadRecipients(''); // initial
+    this.loadRecipients('');
   }
 
   closePicker() {
@@ -477,7 +503,6 @@ export class TeaPage {
     if (search) qs.set('search', search);
     qs.set('per_page', '20');
 
-    // Try BuddyBoss, fallback BuddyPress
     const bbUrl = `/wp-json/buddyboss/v1/members?${qs.toString()}`;
     const bpUrl = `/wp-json/buddypress/v1/members?${qs.toString()}`;
 
@@ -495,7 +520,8 @@ export class TeaPage {
           error: (e2) => {
             this.recipients = [];
             this.pickerLoading = false;
-            this.pickerError = e2?.error?.message ?? 'Could not load recipients.';
+            this.pickerError =
+              e2?.error?.message ?? 'Could not load recipients.';
           },
         });
       },
@@ -520,7 +546,7 @@ export class TeaPage {
     const item = this.shareItem;
     if (!item) return;
 
-    // Store locally as an “outbox” placeholder (until Messages page exists)
+    // Store locally as a placeholder outbox until your Messages feature exists
     const outboxKey = 'ed_dm_outbox';
     const existing = JSON.parse(localStorage.getItem(outboxKey) || '[]');
 

@@ -3,94 +3,51 @@
 }
 
 ion-content.tea {
-  --background: #f4f5f7;
+  --background: #f5f6fa;
 }
 
-/* Composer */
+/* ===== Composer ===== */
+
 .composer {
   padding: 12px;
 }
 
 .composer-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, .06);
-  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 16px;
   padding: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+  box-shadow: 0 8px 24px rgba(0,0,0,.04);
 }
 
-.composer-row {
+.row {
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
 
-.me-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 9999px;
-  background: rgba(0,0,0,.06);
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
-
-.me-avatar ion-icon {
+.me {
   font-size: 34px;
-  opacity: 0.8;
+  opacity: .75;
+  margin-top: 2px;
 }
 
 .composer-input {
   width: 100%;
-  --padding-start: 0;
-  --padding-end: 0;
-  --padding-top: 6px;
-  --padding-bottom: 6px;
-  font-size: 15px;
-}
-
-/* Attachments preview */
-.attachments {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 8px 2px 0;
-}
-
-.chip {
-  position: relative;
-  width: 120px;
-  height: 90px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  --padding-start: 10px;
+  --padding-end: 10px;
   border-radius: 14px;
-  overflow: hidden;
-  background: rgba(0,0,0,.06);
-  border: 1px solid rgba(0,0,0,.06);
-  flex: 0 0 auto;
-}
-
-.thumb img,
-.thumb video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.remove {
-  position: absolute;
-  right: 4px;
-  top: 4px;
-  height: 28px;
-  width: 28px;
-  --padding-start: 0;
-  --padding-end: 0;
+  background: rgba(0,0,0,.03);
+  font-size: 14px;
 }
 
 .composer-actions {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding-top: 10px;
+  align-items: center;
+  margin-top: 10px;
 }
 
 .attach {
@@ -103,30 +60,64 @@ ion-content.tea {
 
 .post-btn {
   height: 34px;
-  --border-radius: 9999px;
-  font-weight: 800;
   text-transform: none;
+  font-weight: 800;
 }
 
-/* States */
 .error {
   margin-top: 10px;
   color: #b00020;
-  font-weight: 600;
+  font-size: 13px;
 }
+
+/* Attachments preview */
+
+.attachments {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-top: 10px;
+}
+
+.chip {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0,0,0,.06);
+  flex: 0 0 auto;
+  border: 1px solid rgba(0,0,0,.08);
+}
+
+.thumb img,
+.thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  --padding-start: 0;
+  --padding-end: 0;
+  height: 30px;
+}
+
+/* ===== Loading ===== */
 
 .busy {
-  margin: 14px 12px 0;
-  display: flex;
-  align-items: center;
+  display: grid;
+  place-items: center;
   gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, .06);
+  padding: 30px 0;
+  opacity: .85;
 }
 
-/* Feed */
+/* ===== Feed Cards ===== */
+
 .feed {
   padding: 0;
   margin: 0;
@@ -134,14 +125,14 @@ ion-content.tea {
 
 .card {
   margin: 12px 12px 0;
-  border-radius: 18px;
-  border: 1px solid rgba(0, 0, 0, .06);
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.06);
+  --background: #fff;
   --padding-start: 12px;
   --inner-padding-end: 12px;
-  --background: #fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,.04);
 }
 
-/* Head */
 .head {
   display: flex;
   justify-content: space-between;
@@ -158,8 +149,8 @@ ion-content.tea {
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 9999px;
   object-fit: cover;
   background: rgba(0,0,0,.06);
@@ -180,18 +171,19 @@ ion-content.tea {
 
 .time {
   font-size: 12px;
-  opacity: 0.65;
+  opacity: .65;
 }
 
 .icon-btn {
-  height: 34px;
   --padding-start: 6px;
   --padding-end: 6px;
+  height: 34px;
 }
 
 /* Body */
+
 .body {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.45;
   margin-bottom: 10px;
 }
@@ -199,45 +191,50 @@ ion-content.tea {
 /* BuddyBoss content margins */
 .body :global(p) { margin: 6px 0; }
 .body :global(ul) { margin: 6px 0 6px 18px; }
+.body :global(a) { text-decoration: underline; }
 
 /* Media */
+
+/* Media area */
 .media {
+  margin-top: 10px;
   display: grid;
   gap: 10px;
-  margin-bottom: 10px;
 }
 
-.media-img,
+/* Images */
+.media-img {
+  width: 100%;
+  max-height: 420px;      /* ✅ stops huge images */
+  object-fit: cover;      /* IG style */
+  border-radius: 14px;
+  background: #000;
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+/* Videos */
 .media-video {
   width: 100%;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.06);
-  background: rgba(0,0,0,.04);
-  overflow: hidden;
-}
-
-.media-img {
-  display: block;
+  max-height: 520px;
   object-fit: cover;
-}
-
-.media-video {
-  display: block;
+  border-radius: 14px;
+  background: #000;
+  border: 1px solid rgba(0,0,0,.06);
 }
 
 /* Actions */
+
 .actions {
   display: flex;
   gap: 6px;
   border-top: 1px solid rgba(0,0,0,.06);
   padding-top: 8px;
-  flex-wrap: wrap;
 }
 
 .action {
+  --padding-start: 6px;
+  --padding-end: 6px;
   height: 34px;
-  --padding-start: 8px;
-  --padding-end: 8px;
   text-transform: none;
   font-weight: 800;
 }
@@ -248,51 +245,29 @@ ion-content.tea {
 }
 
 .empty {
-  opacity: 0.7;
+  opacity: .7;
   text-align: center;
   margin: 16px 0 30px;
 }
 
-/* Recipient Picker Modal */
+/* ===== Recipient Picker Modal ===== */
+
 .picker-modal::part(content) {
-  --width: 100%;
-  --height: 90%;
-  --border-radius: 18px 18px 0 0;
+  border-radius: 18px 18px 0 0;
 }
 
 .picker-search {
   padding: 0 10px 10px;
-  background: #fff;
 }
 
 .picker-state {
-  padding: 16px;
-  display: flex;
-  align-items: center;
+  display: grid;
+  place-items: center;
   gap: 10px;
+  padding: 20px;
+  opacity: .85;
 }
 
-.picker-error {
-  padding: 14px 16px;
-  color: #b00020;
-  font-weight: 700;
-}
-
-.picker-list {
-  padding: 0;
-}
-
-.picker-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 9999px;
-  object-fit: cover;
-  margin-right: 10px;
-  background: rgba(0,0,0,.06);
-}
-
-.picker-empty {
-  opacity: 0.7;
-  text-align: center;
-  margin: 16px 0;
+.r-name {
+  font-weight: 800;
 }

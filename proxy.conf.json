@@ -4,5 +4,10 @@
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug"
-  }
+  },
+
+  "/bb-media-preview": { "target": "https://everythingdid.com", "secure": true, "changeOrigin": true },
+
+  "/wp-content": { "target": "https://everythingdid.com", "secure": true, "changeOrigin": true }
+  
 }
