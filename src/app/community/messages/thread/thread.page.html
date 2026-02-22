@@ -10,12 +10,16 @@
       <div class="t-avatar">
         <img [src]="avatar" alt="" />
       </div>
-      <ion-title class="t-title">{{ title }}</ion-title>
+
+      <div class="t-meta">
+        <div class="t-name">{{ title }}</div>
+        <div class="t-sub">Active</div>
+      </div>
     </div>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="chat" [fullscreen]="true">
   <div class="state" *ngIf="loading">
     <ion-spinner></ion-spinner>
   </div>
@@ -23,27 +27,43 @@
   <div class="error" *ngIf="!loading && error">{{ error }}</div>
 
   <div class="chat-scroll" *ngIf="!loading">
-    <div
-      class="bubble"
-      *ngFor="let m of messages"
-      [class.mine]="isMine(m)"
-    >
-      <div class="text">{{ m.text }}</div>
-      <div class="time" *ngIf="m.at">{{ m.at | date:'shortTime' }}</div>
-    </div>
-  </div>
+    <ng-container *ngFor="let m of messages; let i = index">
+      <!-- Day separator -->
+      <div class="day" *ngIf="shouldShowDay(i)">
+        <span *ngIf="dayDate(i) as dd">{{ dd | date:'MMM d, y' }}</span>
+      </div>
 
-  <!-- Composer -->
+      <!-- Bubble -->
+      <div class="row" [class.mine]="isMine(m)">
+        <div class="bubble" [class.mine]="isMine(m)">
+          <div class="text">{{ m.text }}</div>
+
+          <div class="time" *ngIf="parseApiDate(m.at) as dt">
+            {{ dt | date:'shortTime' }}
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="end-pad"></div>
+  </div>
+</ion-content>
+
+<!-- ✅ Footer so composer sits ABOVE tab bar -->
+<ion-footer class="chat-footer tabs-safe">
   <div class="composer">
-    <ion-textarea
-      class="input"
-      [(ngModel)]="text"
-      autoGrow="true"
-      placeholder="Message..."
-    ></ion-textarea>
+    <div class="input-wrap">
+      <ion-textarea
+        class="input"
+        [(ngModel)]="text"
+        autoGrow="true"
+        placeholder="Message…"
+        rows="1"
+      ></ion-textarea>
+    </div>
 
     <ion-button class="send" (click)="send()" [disabled]="!(text || '').trim()">
       <ion-icon name="send-outline"></ion-icon>
     </ion-button>
   </div>
-</ion-content>
+</ion-footer>

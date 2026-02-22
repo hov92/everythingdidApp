@@ -16,7 +16,7 @@ export type ThreadRow = {
   title: string;
   avatar: string;
   lastText: string;
-  lastAt: string;     // ISO string from API
+  lastAt: string; // keep as API string
   unread: number;
 };
 
@@ -41,7 +41,7 @@ export type MessageRow = {
   senderId: number;
   fromMe: boolean;
   text: string;
-  at: string;
+  at: string; // keep as API string
   senderName?: string;
   senderAvatar?: string;
 };
@@ -66,42 +66,45 @@ export class BuddyBossMessagesService {
 
   // BuddyBoss first, fallback BuddyPress
   private bb = {
-    threads: (qs = '') => `/wp-json/buddyboss/v1/messages?${qs}`,
-    thread: (id: string, qs = '') => `/wp-json/buddyboss/v1/messages/${id}?${qs}`,
+    threads: (qs = '') => `/wp-json/buddyboss/v1/messages${qs ? `?${qs}` : ''}`,
+    thread: (id: string, qs = '') => `/wp-json/buddyboss/v1/messages/${id}${qs ? `?${qs}` : ''}`,
     create: () => `/wp-json/buddyboss/v1/messages`,
+    searchRecipients: (qs = '') => `/wp-json/buddyboss/v1/messages/search-recipients${qs ? `?${qs}` : ''}`,
   };
 
   private bp = {
-    threads: (qs = '') => `/wp-json/buddypress/v1/messages?${qs}`,
-    thread: (id: string, qs = '') => `/wp-json/buddypress/v1/messages/${id}?${qs}`,
+    threads: (qs = '') => `/wp-json/buddypress/v1/messages${qs ? `?${qs}` : ''}`,
+    thread: (id: string, qs = '') => `/wp-json/buddypress/v1/messages/${id}${qs ? `?${qs}` : ''}`,
     create: () => `/wp-json/buddypress/v1/messages`,
   };
 
   // ---------------- API ----------------
 
   listThreads(params: ThreadListParams = {}): Observable<ThreadRow[]> {
-    const qs = new URLSearchParams({
-      per_page: String(params.per_page ?? 20),
-      page: String(params.page ?? 1),
-      box: String(params.box ?? 'inbox'),
-      type: String(params.type ?? 'all'),
-    }).toString();
+    const qs = new URLSearchParams();
 
-    return this.http.get<any>(this.bb.threads(qs)).pipe(
-      catchError(() => this.http.get<any>(this.bp.threads(qs))),
+    qs.set('per_page', String(params?.per_page ?? 20));
+    qs.set('page', String(params?.page ?? 1));
+    qs.set('box', String(params?.box ?? 'inbox'));
+    qs.set('type', String(params?.type ?? 'all'));
+
+    return this.http.get<any>(this.bb.threads(qs.toString())).pipe(
+      catchError(() => this.http.get<any>(this.bp.threads(qs.toString()))),
       map((raw) => this.normalizeThreads(raw))
     );
   }
 
-  getThread(threadId: number | string, params: { per_page?: number; page?: number } = {}): Observable<ThreadDetail> {
+  getThread(
+    threadId: number | string,
+    params: { per_page?: number; page?: number } = {}
+  ): Observable<ThreadDetail> {
     const id = String(threadId);
-    const qs = new URLSearchParams({
-      per_page: String(params.per_page ?? 20),
-      page: String(params.page ?? 1),
-    }).toString();
+    const qs = new URLSearchParams();
+    qs.set('per_page', String(params?.per_page ?? 20));
+    qs.set('page', String(params?.page ?? 1));
 
-    return this.http.get<any>(this.bb.thread(id, qs)).pipe(
-      catchError(() => this.http.get<any>(this.bp.thread(id, qs))),
+    return this.http.get<any>(this.bb.thread(id, qs.toString())).pipe(
+      catchError(() => this.http.get<any>(this.bp.thread(id, qs.toString()))),
       map((raw) => this.normalizeThreadDetail(raw))
     );
   }
@@ -112,23 +115,20 @@ export class BuddyBossMessagesService {
    * - New:   POST /messages with { recipients: [ids], message: "...", subject?: "..." }
    */
   sendMessage(input: SendMessageInput): Observable<any> {
-    const payload: AnyObj = {
-      message: String(input.message ?? '').trim(),
-    };
+    const message = String(input?.message ?? '').trim();
+    if (!message) return throwError(() => new Error('Message is required.'));
 
-    if (!payload['message']) {
-      return throwError(() => new Error('Message is required.'));
-    }
+    const payload: AnyObj = { message };
 
-    if (input.subject) payload['subject'] = String(input.subject);
+    if (input?.subject) payload['subject'] = String(input.subject);
 
-    if (input.id != null) {
+    if (input?.id != null) {
       // reply to existing thread
-      payload['id'] = Number(input.id);
+      // keep as string/number; BuddyBoss accepts integer-like, but don't force Number() here
+      payload['id'] = input.id;
     } else {
-      // create a new thread
-      const recips = Array.isArray(input.recipients) ? input.recipients : [];
-      payload['recipients'] = recips.map((x) => Number(x));
+      const recips = Array.isArray(input?.recipients) ? input.recipients : [];
+      payload['recipients'] = recips.map((x) => Number(x)).filter((n) => !Number.isNaN(n));
     }
 
     return this.http.post<any>(this.bb.create(), payload).pipe(
@@ -136,25 +136,27 @@ export class BuddyBossMessagesService {
     );
   }
 
-  // Optional: BuddyBoss recipient search (IG “To:” picker)
+  // BuddyBoss recipient search (IG “To:” picker)
   searchRecipients(term: string, params: { per_page?: number; page?: number } = {}) {
-    const qs = new URLSearchParams({
-      term: term,
-      per_page: String(params.per_page ?? 20),
-      page: String(params.page ?? 1),
-    }).toString();
+    const qs = new URLSearchParams();
+    qs.set('term', String(term ?? ''));
+    qs.set('per_page', String(params?.per_page ?? 20));
+    qs.set('page', String(params?.page ?? 1));
 
-    return this.http.get<any>(`/wp-json/buddyboss/v1/messages/search-recipients?${qs}`);
+    return this.http.get<any>(this.bb.searchRecipients(qs.toString()));
   }
 
   // ---------------- Normalizers (based on YOUR real response) ----------------
 
   private normalizeThreads(raw: any): ThreadRow[] {
-    // BuddyBoss list endpoint usually returns an array of thread objects like the one you pasted (minus messages array sometimes)
-    const arr: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.['threads']) ? raw['threads'] : [];
-    if (!Array.isArray(arr)) return [];
+    const arr: any[] = Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.['threads'])
+        ? raw['threads']
+        : [];
 
-    return arr.map((t) => this.threadToRow(t));
+    if (!Array.isArray(arr)) return [];
+    return arr.map((t) => this.threadToRow(t as AnyObj));
   }
 
   private threadToRow(t: AnyObj): ThreadRow {
@@ -165,10 +167,14 @@ export class BuddyBossMessagesService {
     // recipients is an object keyed by user id in YOUR response
     const recipientsObj = t?.['recipients'];
     const recipientsArr: AnyObj[] =
-      recipientsObj && typeof recipientsObj === 'object' ? (Object.values(recipientsObj) as AnyObj[]) : [];
+      recipientsObj && typeof recipientsObj === 'object'
+        ? (Object.values(recipientsObj) as AnyObj[])
+        : [];
 
-    // pick the “other person” (1:1) for avatar/title
-    const other = recipientsArr.find((r) => Number(r?.['user_id'] ?? 0) !== currentUser) || recipientsArr[0] || {};
+    const other =
+      recipientsArr.find((r) => Number(r?.['user_id'] ?? 0) !== currentUser) ||
+      recipientsArr[0] ||
+      {};
 
     const subject = this.htmlToText(t?.['subject']?.['rendered'] ?? '') || 'Message';
     const title = this.safeText(other?.['name']) || subject;
@@ -201,9 +207,14 @@ export class BuddyBossMessagesService {
 
     const recipientsObj = t?.['recipients'];
     const recipientsArr: AnyObj[] =
-      recipientsObj && typeof recipientsObj === 'object' ? (Object.values(recipientsObj) as AnyObj[]) : [];
+      recipientsObj && typeof recipientsObj === 'object'
+        ? (Object.values(recipientsObj) as AnyObj[])
+        : [];
 
-    const other = recipientsArr.find((r) => Number(r?.['user_id'] ?? 0) !== currentUser) || recipientsArr[0] || {};
+    const other =
+      recipientsArr.find((r) => Number(r?.['user_id'] ?? 0) !== currentUser) ||
+      recipientsArr[0] ||
+      {};
 
     const subject = this.htmlToText(t?.['subject']?.['rendered'] ?? '') || 'Chat';
     const title = this.safeText(other?.['name']) || subject;
@@ -224,12 +235,12 @@ export class BuddyBossMessagesService {
         'https://www.gravatar.com/avatar/?d=mp&s=96',
     }));
 
-    const msgs: AnyObj[] = Array.isArray(t?.['messages']) ? t['messages'] : [];
+    const msgs: AnyObj[] = Array.isArray(t?.['messages']) ? (t['messages'] as AnyObj[]) : [];
 
     const messages: MessageRow[] = msgs
       .map((m) => this.messageToRow(m, currentUser))
-      // chat should be oldest -> newest
-      .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+      // sort oldest->newest using the SAME “timezone-less” parse logic
+      .sort((a, b) => this.parseLocalNoTz(a.at) - this.parseLocalNoTz(b.at));
 
     return {
       id,
@@ -250,7 +261,6 @@ export class BuddyBossMessagesService {
     const senderId = Number(m?.['sender_id'] ?? 0);
     const fromMe = senderId === currentUser;
 
-    // prefer raw, fallback rendered html -> text
     const rawText = m?.['message']?.['raw'];
     const rendered = m?.['message']?.['rendered'];
     const text = this.safeText(rawText) || this.htmlToText(rendered ?? '');
@@ -298,5 +308,30 @@ export class BuddyBossMessagesService {
       .replace(/&amp;/g, '&')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
+  }
+
+  /**
+   * Option-A helper for sorting:
+   * If the API sends "YYYY-MM-DDTHH:mm:ss" WITHOUT timezone, treat it as local time.
+   * Returns epoch ms, safe fallback 0.
+   */
+  private parseLocalNoTz(input: any): number {
+    const s = String(input ?? '').trim();
+    if (!s) return 0;
+
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? 0 : d.getTime();
+    }
+
+    const y = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const day = Number(m[3]);
+    const h = Number(m[4]);
+    const mi = Number(m[5]);
+    const sec = Number(m[6] ?? 0);
+
+    return new Date(y, mo, day, h, mi, sec).getTime();
   }
 }
