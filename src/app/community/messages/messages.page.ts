@@ -11,27 +11,18 @@ import {
   IonButtons,
   IonButton,
   IonIcon,
+  IonList,
   IonItem,
   IonLabel,
-  IonList,
   IonSearchbar,
+  IonSpinner,
+  IonBadge,
 } from '@ionic/angular/standalone';
 
 import { addIcons } from 'ionicons';
-import { addOutline, chatbubblesOutline, paperPlaneOutline } from 'ionicons/icons';
+import { createOutline } from 'ionicons/icons';
 
-type Recipient = { id: number | string; name: string; avatar?: string };
-type OutboxItem = { to: Recipient; url: string; postId: string; sentAt: string };
-
-type Msg = { id: string; fromMe: boolean; text: string; at: string };
-type Thread = { id: string; peer: Recipient; lastText: string; lastAt: string; unread?: number; messages: Msg[] };
-
-const OUTBOX_KEY = 'ed_dm_outbox';
-const THREADS_KEY = 'ed_dm_threads';
-
-function safeJson<T>(raw: string | null, fallback: T): T {
-  try { return raw ? (JSON.parse(raw) as T) : fallback; } catch { return fallback; }
-}
+import { BuddyBossMessagesService, ThreadRow } from '../../services/buddyboss-messages.service';
 
 @Component({
   standalone: true,
@@ -42,6 +33,7 @@ function safeJson<T>(raw: string | null, fallback: T): T {
     CommonModule,
     FormsModule,
     DatePipe,
+
     IonContent,
     IonHeader,
     IonToolbar,
@@ -49,90 +41,69 @@ function safeJson<T>(raw: string | null, fallback: T): T {
     IonButtons,
     IonButton,
     IonIcon,
+
+    IonSearchbar,
+    IonSpinner,
     IonList,
     IonItem,
     IonLabel,
-    IonSearchbar,
+    IonBadge,
   ],
 })
 export class MessagesPage {
   q = '';
-  threads: Thread[] = [];
-  outbox: OutboxItem[] = [];
+  loading = false;
+  error = '';
+  threads: ThreadRow[] = [];
 
-  constructor(private router: Router) {
-    addIcons({ addOutline, chatbubblesOutline, paperPlaneOutline });
+  constructor(private api: BuddyBossMessagesService, private router: Router) {
+    addIcons({ createOutline });
   }
 
   ionViewWillEnter() {
     this.load();
   }
 
-  load() {
-    this.outbox = safeJson<OutboxItem[]>(localStorage.getItem(OUTBOX_KEY), []);
-    this.threads = safeJson<Thread[]>(localStorage.getItem(THREADS_KEY), []);
-    // newest first
-    this.threads.sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
+  load(ev?: any) {
+    this.loading = !ev;
+    this.error = '';
+
+    this.api.listThreads({ per_page: 30, page: 1 }).subscribe({
+      next: (rows) => {
+        this.threads = Array.isArray(rows) ? rows : [];
+        this.loading = false;
+        ev?.target?.complete?.();
+      },
+      error: (e) => {
+        this.loading = false;
+        this.error = e?.error?.message ?? 'Could not load messages.';
+        ev?.target?.complete?.();
+      },
+    });
   }
 
-  get filteredThreads() {
+  onSearch(ev: any) {
+    this.q = (ev?.detail?.value ?? '').toString();
+  }
+
+  get filtered(): ThreadRow[] {
     const q = (this.q || '').trim().toLowerCase();
     if (!q) return this.threads;
-    return this.threads.filter(t =>
-      (t.peer?.name || '').toLowerCase().includes(q) ||
-      (t.lastText || '').toLowerCase().includes(q)
-    );
+
+    return (this.threads || []).filter((t) => {
+      const title = String(t?.title || '').toLowerCase();
+      const last = String(t?.lastText || '').toLowerCase();
+      return title.includes(q) || last.includes(q);
+    });
   }
 
-  // Convert outbox “sent link” into a real local thread (so it looks like DM exists)
-  acceptOutbox(item: OutboxItem) {
-    const threads = safeJson<Thread[]>(localStorage.getItem(THREADS_KEY), []);
-
-    const peer = item.to;
-    const tid = `peer:${peer.id}`;
-
-    let thread = threads.find(t => t.id === tid);
-    if (!thread) {
-      thread = {
-        id: tid,
-        peer,
-        lastText: '',
-        lastAt: '',
-        unread: 0,
-        messages: [],
-      };
-      threads.unshift(thread);
-    }
-
-    const msg: Msg = {
-      id: `m-${Date.now()}`,
-      fromMe: true,
-      text: item.url,
-      at: item.sentAt,
-    };
-
-    thread.messages.unshift(msg);
-    thread.lastText = 'Shared a post';
-    thread.lastAt = item.sentAt;
-
-    localStorage.setItem(THREADS_KEY, JSON.stringify(threads));
-
-    // remove from outbox
-    const outbox = safeJson<OutboxItem[]>(localStorage.getItem(OUTBOX_KEY), []);
-    const next = outbox.filter(x => !(x.sentAt === item.sentAt && String(x.to?.id) === String(item.to?.id)));
-    localStorage.setItem(OUTBOX_KEY, JSON.stringify(next));
-
-    this.load();
-    this.openThread(thread);
-  }
-
-  openThread(t: Thread) {
+  openThread(t: ThreadRow) {
+    // route: /community/messages/:id
     this.router.navigate(['/community/messages', encodeURIComponent(t.id)]);
   }
 
-  newMessage() {
-    // We’ll reuse your existing “recipient picker” idea later.
-    // For now, this just goes to Messages list; you can add a picker next.
-    this.router.navigateByUrl('/community/messages');
+  compose() {
+    // next step: open recipient picker (IG style) then create thread
+    console.log('compose');
   }
 }

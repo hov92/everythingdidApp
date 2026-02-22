@@ -1,0 +1,49 @@
+<ion-header class="chat-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" (click)="back()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+
+    <div class="chat-title">
+      <div class="t-avatar">
+        <img [src]="avatar" alt="" />
+      </div>
+      <ion-title class="t-title">{{ title }}</ion-title>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="state" *ngIf="loading">
+    <ion-spinner></ion-spinner>
+  </div>
+
+  <div class="error" *ngIf="!loading && error">{{ error }}</div>
+
+  <div class="chat-scroll" *ngIf="!loading">
+    <div
+      class="bubble"
+      *ngFor="let m of messages"
+      [class.mine]="isMine(m)"
+    >
+      <div class="text">{{ m.text }}</div>
+      <div class="time" *ngIf="m.at">{{ m.at | date:'shortTime' }}</div>
+    </div>
+  </div>
+
+  <!-- Composer -->
+  <div class="composer">
+    <ion-textarea
+      class="input"
+      [(ngModel)]="text"
+      autoGrow="true"
+      placeholder="Message..."
+    ></ion-textarea>
+
+    <ion-button class="send" (click)="send()" [disabled]="!(text || '').trim()">
+      <ion-icon name="send-outline"></ion-icon>
+    </ion-button>
+  </div>
+</ion-content>
